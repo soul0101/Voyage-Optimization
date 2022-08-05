@@ -8,5 +8,18 @@ For ships the ocean currents are an important factor.<br>
 - Edges are the 8-point ocean neighbours with weights being the time taken by the ship to travel the length of the edge considering the __Ocean Currents__. 
 - This daisi generates an optimal route for a ship by running __Dijkstra's Shortest Path Algorithm__ on this graph with the __Start__ and __End__ points taken as inputs.
 ## TEST API
-```
+``` python
+import pydaisi as pyd
+voyage_optimization = pyd.Daisi("soul0101/Voyage Optimization")
+
+start_coord = (14.37, 89.45)
+end_coord = (32.64, -18.90)
+boat_avg_speed = 0.1
+
+ds = voyage_optimization.get_ocean_current_dataset().value
+lon, lat, U, V = voyage_optimization.process_ds(ds).value
+
+G = voyage_optimization.graph_factory(lon, lat, U, V, boat_avg_speed).value
+path = voyage_optimization.get_optimal_routes(G, start_coord, end_coord, lon, lat).value
+xx, yy = voyage_optimization.get_coordinates_from_path_indices(path, lon, lat).value
 ```
