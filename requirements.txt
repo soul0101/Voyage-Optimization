@@ -1,0 +1,11 @@
+cartopy
+global_land_mask
+folium
+igraph
+matplotlib
+numpy
+pandas
+scipy
+streamlit
+streamlit_folium
+xarray
