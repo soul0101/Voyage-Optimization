@@ -1,7 +1,7 @@
 import os 
 import helper
 import folium
-import netCDF4
+import pickle
 # import cartopy
 import numpy as np
 # import xarray as xr
@@ -19,28 +19,43 @@ def get_ocean_current_dataset():
 
     Returns
     -------
-    ds: netCDF.Dataset
-        The dataset containing the ocean currents data
+    lon: array
+        1D array containing longitude points
+    lat: array
+        1D array containing latitude points
+    U: array
+        2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
+    V: array
+        2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
 
     """
-    url = 'https://podaac-opendap.jpl.nasa.gov/opendap/allData/oscar/L4/oscar_1_deg/world_oscar_vel_5d2022.nc.gz'
-    # ds = xr.open_dataset(url, decode_times=False)
-    try:
-        ds = netCDF4.Dataset(url)
-    except Exception as e:
-        print("Received Error while trying to retrieve ocean currents data. \n%s" % (e))
-        raise e
-    return ds
+    # url = 'https://podaac-opendap.jpl.nasa.gov/opendap/allData/oscar/L4/oscar_1_deg/world_oscar_vel_5d2022.nc.gz'
+    # try:
+    #     ds = netCDF4.Dataset(url)
+    # except Exception as e:
+    #     print("Received Error while trying to retrieve ocean currents data. \n%s" % (e))
+    #     raise e
+    # return ds
 
-def process_ds(ds):
+    with open('ocean-current-dataset.pkl', 'rb') as f_obj:
+        lon, lat, U, V = pickle.load(f_obj)
+    
+    return lon, lat, U, V
+    
+def process_ds(lon, lat, U, V):
     """
-    Process the dataset
+    Gets the Ocean Currents data: https://podaac.jpl.nasa.gov/dataset/OSCAR_L4_OC_1deg
 
     Parameters
     ----------
-    ds: netCDF.Dataset
-        The dataset containing the ocean currents data
-
+    lon: array
+        1D array containing longitude points
+    lat: array
+        1D array containing latitude points
+    U: array
+        2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
+    V: array
+        2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
 
     Returns
     -------
@@ -54,15 +69,12 @@ def process_ds(ds):
         2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
 
     """
-
-    lon = ds['longitude'][:]
-    lat = ds['latitude'][:]
-    U = ds['uf'][0,0,:,:].filled()
-    V = ds['vf'][0,0,:,:].filled()
+    U = U[0, 0, :, :]
+    V = V[0, 0, :, :]
+    lon[lon>180] = lon[lon>180] - 360
+    
     U[np.isnan(U)] = 0.0
     V[np.isnan(V)] = 0.0
-
-    lon[lon>180] = lon[lon>180] - 360
 
     return lon, lat, U, V
 
@@ -352,8 +364,10 @@ def st_ui():
 
     if generate_btn:
         with st.spinner("Fetching Ocean Current Dataset..."):
-            ds = get_ocean_current_dataset()
-            lon, lat, U, V = process_ds(ds)
+            # ds = get_ocean_current_dataset()
+            # lon, lat, U, V = process_ds(ds)
+            lon, lat, U, V = get_ocean_current_dataset()
+            lon, lat, U, V = process_ds(lon, lat, U, V)
 
         with st.spinner("Creating the latitude-longitude Graph..."):
             G = graph_factory(lon, lat, U, V, boat_avg_speed)
