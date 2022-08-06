@@ -1,9 +1,10 @@
 import os 
 import helper
 import folium
+import netCDF4
 # import cartopy
 import numpy as np
-import xarray as xr
+# import xarray as xr
 import igraph as ig
 import streamlit as st
 # import cartopy.crs as ccrs
@@ -18,38 +19,50 @@ def get_ocean_current_dataset():
 
     Returns
     -------
-    ds: xarray.Dataset
+    ds: netCDF.Dataset
         The dataset containing the ocean currents data
 
     """
     url = 'https://podaac-opendap.jpl.nasa.gov/opendap/allData/oscar/L4/oscar_1_deg/world_oscar_vel_5d2022.nc.gz'
-    ds = xr.open_dataset(url, decode_times=False)
+    # ds = xr.open_dataset(url, decode_times=False)
+    try:
+        ds = netCDF4.Dataset(url)
+    except Exception as e:
+        print("Received Error while trying to retrieve ocean currents data. \n%s" % (e))
+        raise e
     return ds
 
 def process_ds(ds):
     """
-    Gets the Ocean Currents data: https://podaac.jpl.nasa.gov/dataset/OSCAR_L4_OC_1deg
+    Process the dataset
 
     Parameters
     ----------
-    depot_locations: 
-        A list of tuples containing the (latitude, longitude) of each depot.
+    ds: netCDF.Dataset
+        The dataset containing the ocean currents data
 
 
     Returns
     -------
-    ds: xarray.Dataset
-        The dataset containing the ocean currents data
+    lon: array
+        1D array containing longitude points
+    lat: array
+        1D array containing latitude points
+    U: array
+        2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
+    V: array
+        2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
 
     """
-    lon = ds.longitude.values
-    lon[lon>180] = lon[lon>180] - 360
-    lat = ds.latitude.values
 
-    U = ds.u.values[0,0,:,:]
-    V = ds.v.values[0,0,:,:]
+    lon = ds['longitude'][:]
+    lat = ds['latitude'][:]
+    U = ds['uf'][0,0,:,:].filled()
+    V = ds['vf'][0,0,:,:].filled()
     U[np.isnan(U)] = 0.0
     V[np.isnan(V)] = 0.0
+
+    lon[lon>180] = lon[lon>180] - 360
 
     return lon, lat, U, V
 
@@ -160,7 +173,7 @@ def get_optimal_routes(graph_object, start_coord, end_coord, lon, lat):
 
 def get_coordinates_from_path_indices(path, lon, lat):
     """
-    Generates the shortest path for the ship. (Dijkstra's Algorithm)
+    Converts the Vertex-indices in path array to array of lat and lon coordinates
 
     Parameters
     ----------
@@ -338,8 +351,9 @@ def st_ui():
         generate_btn = placeholder.button("Generate Best Path", disabled=True)
 
     if generate_btn:
-        ds = get_ocean_current_dataset()
-        lon, lat, U, V = process_ds(ds)
+        with st.spinner("Fetching Ocean Current Dataset..."):
+            ds = get_ocean_current_dataset()
+            lon, lat, U, V = process_ds(ds)
 
         with st.spinner("Creating the latitude-longitude Graph..."):
             G = graph_factory(lon, lat, U, V, boat_avg_speed)
