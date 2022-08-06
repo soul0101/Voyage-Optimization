@@ -37,7 +37,7 @@ def get_ocean_current_dataset():
     #     raise e
     # return ds
 
-    with open('ocean-current-dataset.pkl', 'rb') as f_obj:
+    with open(os.path.join(os.path.dirname(__file__), "./dataset/ocean-current-dataset-2022.pkl"), 'rb') as f_obj:
         lon, lat, U, V = pickle.load(f_obj)
     
     return lon, lat, U, V
