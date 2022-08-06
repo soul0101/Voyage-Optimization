@@ -23,7 +23,7 @@ def get_ocean_current_dataset():
 
     """
     url = 'https://podaac-opendap.jpl.nasa.gov/opendap/allData/oscar/L4/oscar_1_deg/world_oscar_vel_5d2022.nc.gz'
-    ds = xr.open_dataset(url, decode_times=False, cache=True)
+    ds = xr.open_dataset(url, decode_times=False)
     return ds
 
 def process_ds(ds):
