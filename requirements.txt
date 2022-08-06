@@ -1,3 +1,4 @@
+basemap
 global_land_mask
 folium
 igraph
