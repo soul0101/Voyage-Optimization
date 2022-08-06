@@ -14,10 +14,10 @@ voyage_optimization = pyd.Daisi("soul0101/Voyage Optimization")
 
 start_coord = (14.37, 89.45)
 end_coord = (32.64, -18.90)
-boat_avg_speed = 0.1
+boat_avg_speed = 1.0
 
-ds = voyage_optimization.get_ocean_current_dataset().value
-lon, lat, U, V = voyage_optimization.process_ds(ds).value
+lon, lat, U, V = voyage_optimization.get_ocean_current_dataset().value
+lon, lat, U, V = voyage_optimization.process_ds(lon, lat, U, V).value
 
 G = voyage_optimization.graph_factory(lon, lat, U, V, boat_avg_speed).value
 path = voyage_optimization.get_optimal_routes(G, start_coord, end_coord, lon, lat).value
