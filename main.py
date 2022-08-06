@@ -1,15 +1,16 @@
 import os 
 import helper
 import folium
-import cartopy
+# import cartopy
 import numpy as np
 import xarray as xr
 import igraph as ig
 import streamlit as st
-import cartopy.crs as ccrs
+# import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from global_land_mask import globe
 from streamlit_folium import st_folium
+from mpl_toolkits.basemap import Basemap
 
 def get_ocean_current_dataset():
     """
@@ -76,6 +77,7 @@ def graph_factory(lon, lat, U, V, boat_avg_speed):
         The generated graph
 
     """
+    boat_avg_speed = float(boat_avg_speed)
     expected_filename = "speed-%s.pkl" % (boat_avg_speed)
     expected_path = os.path.join(os.path.dirname(__file__), "./Graphs/%s" % (expected_filename))
 
@@ -154,7 +156,7 @@ def get_optimal_routes(graph_object, start_coord, end_coord, lon, lat):
             weights=graph_object.es["weight"],
             output="vpath",
         )
-    return path
+    return np.array([helper.get_coord(res, len(lat)) for res in path[0]])
 
 def get_coordinates_from_path_indices(path, lon, lat):
     """
@@ -180,7 +182,7 @@ def get_coordinates_from_path_indices(path, lon, lat):
     path = path.T
     path[0] = lon[path[0]]
     path[1] = lat[path[1]]
-    path = path.astype(np.float)
+    path = path.astype(np.float64)
 
     delta = np.diff(path, axis=1)
     mask = (np.abs(delta) > 1)
@@ -192,6 +194,103 @@ def get_coordinates_from_path_indices(path, lon, lat):
     yy = np.insert(yy, row_indices, np.nan)
 
     return xx, yy
+
+def sanitize(lon, lat, U, V):
+    """
+    Sorts longitude and latitude array (Required for plotting)
+    """
+    
+    lon = np.array(lon)
+    lat = np.array(lat)
+    U = np.array(U)
+    V = np.array(V)
+
+    lon_ind = np.argsort(lon)
+    lon = lon[lon_ind]
+    U = U[:,lon_ind]
+    V = V[:,lon_ind]
+
+    lat_ind = np.argsort(lat)
+    lat = lat[lat_ind]
+    U = U[lat_ind]
+    V = V[lat_ind]
+
+    return lon, lat, U, V
+
+def plot_matplot(lon, lat, U, V, xx, yy):
+    """
+    Generates result plot
+
+    Parameters
+    ----------
+    lon: array
+        1D array containing longitude points
+    lat: array
+        1D array containing latitude points
+    U: array
+        2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
+    V: array
+        2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
+    """
+
+    fig, ax = plt.subplots()
+    m = Basemap(width=12000000,height=9000000,resolution='l')
+    m.drawcoastlines(linewidth=0.5)
+    m.drawmapboundary(fill_color='aqua', linewidth=0.5)
+    m.fillcontinents(color='coral',lake_color='aqua')
+
+    dec = 5
+    lon = lon[::dec]
+    lat = lat[::dec]
+    U = U[::dec, ::dec]
+    V = V[::dec, ::dec]
+    lon, lat, U, V = sanitize(lon, lat, U, V)
+
+    m.streamplot(lon, lat, U, V, latlon=True, color=U, linewidth=0.5, cmap='ocean', arrowsize=0.5)
+
+    m.plot(xx, yy, 'k:', linewidth=2, label='Optimal Path', latlon=True)
+    m.scatter([xx[0]], [yy[0]], c='g', label='Start', latlon=True)
+    m.scatter([xx[-1]], [yy[-1]], c='b', label='End', latlon=True)
+    
+    plt.legend()
+    return fig
+
+# def plot_matplot(lon, lat, U, V, xx, yy):
+#     """
+#     Generates result plot
+
+#     Parameters
+#     ----------
+#     lon: array
+#         1D array containing longitude points
+#     lat: array
+#         1D array containing latitude points
+#     U: array
+#         2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
+#     V: array
+#         2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
+#     """
+
+#     fig = plt.figure(figsize=(8, 12))
+#     ax = plt.axes(projection=ccrs.PlateCarree())
+#     ax.add_feature(cartopy.feature.OCEAN, zorder=0, facecolor=[0.0039, 0.996, 1])
+#     ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', facecolor=[1, 0.498, 0.313], linewidth=0.5)
+
+#     dec = 5
+#     lon = lon[::dec]
+#     lat = lat[::dec]
+#     U = U[::dec, ::dec]
+#     V = V[::dec, ::dec]
+
+#     mymap=plt.streamplot(lon, lat, U, V, density=2, transform=ccrs.PlateCarree(), color=U, cmap='ocean', linewidth=0.5)
+#     ax.plot(xx, yy, 'k:', linewidth=2, label='Optimal Path')
+#     ax.scatter([xx[0]], [yy[0]], c='g', label='Start')
+#     ax.scatter([xx[-1]], [yy[-1]], c='b', label='End')
+    
+#     plt.legend()
+#     return fig
+
+################################## UI ##############################################
 
 def st_sidebar():
     boat_avg_speed = st.sidebar.number_input('Vessel Speed (m/s)', min_value=0.1, max_value=150.0, step=5.0, value=1.0)
@@ -218,43 +317,6 @@ def st_sidebar():
         st_data = st_folium(m, width="350", height="150")
 
     return (s_lat, s_lon), (e_lat, e_lon), boat_avg_speed
-
-def plot_matplot(lon, lat, U, V, xx, yy):
-    """
-    Generates result plot
-
-    Parameters
-    ----------
-    lon: array
-        1D array containing longitude points
-    lat: array
-        1D array containing latitude points
-    U: array
-        2D array containing x component of ocean current speeds [shape -> (len(lat), len(lon))]
-    V: array
-        2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
-    """
-
-    fig = plt.figure(figsize=(8, 12))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.add_feature(cartopy.feature.OCEAN, zorder=0, facecolor=[0.0039, 0.996, 1])
-    ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black', facecolor=[1, 0.498, 0.313], linewidth=0.5)
-
-    dec = 5
-    lon = lon[::dec]
-    lat = lat[::dec]
-    U = U[::dec, ::dec]
-    V = V[::dec, ::dec]
-
-    mymap=plt.streamplot(lon, lat, U, V, density=2, transform=ccrs.PlateCarree(), color=U, cmap='ocean', linewidth=0.5)
-    ax.plot(xx, yy, 'k:', linewidth=2, label='Optimal Path')
-    ax.scatter([xx[0]], [yy[0]], c='g', label='Start')
-    ax.scatter([xx[-1]], [yy[-1]], c='b', label='End')
-    
-    plt.legend()
-    return fig
-
-################################## UI ##############################################
 
 def st_ui():
     st.write("# Welcome to the Ship-Route Optimization Daisi! 👋")
@@ -283,14 +345,15 @@ def st_ui():
             G = graph_factory(lon, lat, U, V, boat_avg_speed)
 
         with st.spinner("Generating Shortest Path..."):
-            results = get_optimal_routes(G, start_coord, end_coord, lon, lat)
-            path = np.array([helper.get_coord(res, len(lat)) for res in results[0]])
-
+            path = get_optimal_routes(G, start_coord, end_coord, lon, lat)
             xx, yy = get_coordinates_from_path_indices(path, lon, lat)
             
         with st.spinner("Plotting results..."):
             fig = plot_matplot(lon, lat, U, V, xx, yy)
             st.pyplot(fig)
+            # fig_html = mpld3.fig_to_html(fig)
+            # components.html(fig_html, height=600)
+
 
 if __name__ == '__main__':
     st_ui()
