@@ -66,7 +66,7 @@ nbclient==0.6.6
 nbconvert==6.5.0
 nbformat==5.4.0
 nest-asyncio==1.5.5
-netCDF4==1.5.2
+netCDF4==1.6.0
 notebook==6.4.12
 numcodecs==0.10.2
 numpy==1.22.4
