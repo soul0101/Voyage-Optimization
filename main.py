@@ -102,25 +102,35 @@ def graph_factory(lon, lat, U, V, boat_avg_speed):
         The generated graph
 
     """
+    path = os.path.join(os.path.dirname(__file__), "./Graphs/ocean_grid.pkl")
+    G_ocean_grid = ig.Graph.Read_Pickle(path)
+
     boat_avg_speed = float(boat_avg_speed)
-    expected_filename = "speed-%s.pkl" % (boat_avg_speed)
-    expected_path = os.path.join(os.path.dirname(__file__), "./Graphs/%s" % (expected_filename))
+    expected_path = os.path.join(os.path.dirname(__file__), "./edge-weight/speed-%s.pkl" % (boat_avg_speed))
 
     if os.path.exists(expected_path):
-        G = ig.Graph.Read_Pickle(expected_path)
+        with open(expected_path, 'rb') as weight_obj:
+            try:
+                edge_weights = pickle.load(weight_obj)
+            except EOFError as e: 
+                weight_obj.close()
+                os.remove(expected_path)
+                raise EOFError("The cached edge weight file seems to be corrupted, please try again.")
 
-        return G
+        G_ocean_grid.es["weight"] = edge_weights
+
+        return G_ocean_grid
     else:
-        path = os.path.join(os.path.dirname(__file__), "./Graphs/ocean_grid.pkl")
-        G_ocean_grid = ig.Graph.Read_Pickle(path)
-        add_weights(G_ocean_grid, lon, lat, U, V, boat_avg_speed)
-        G_ocean_grid.write_pickle(os.path.join(os.path.dirname(__file__), "./Graphs/speed-%s.pkl" % (boat_avg_speed)))
+        edge_weights = get_weights(G_ocean_grid, lon, lat, U, V, boat_avg_speed)
+        G_ocean_grid.es["weight"] = edge_weights
+        # with open(expected_path, 'wb') as weight_obj:
+        #     pickle.dump(edge_weights, weight_obj)
 
         return G_ocean_grid
 
-def add_weights(G, lon, lat, U, V, boat_avg_speed):
+def get_weights(G, lon, lat, U, V, boat_avg_speed):
     """
-    Add edge weights to the graph. Weight corresponds to the time
+    Get edge weights to the graph. Weight corresponds to the time
     taken by the vessel to traverse the distance considering the ocean currents.
 
     Parameters
@@ -137,6 +147,11 @@ def add_weights(G, lon, lat, U, V, boat_avg_speed):
         2D array containing y component of ocean current speeds [shape -> (len(lat), len(lon))]
     boat_avg_speed: float
         The average speed of the Vessel
+
+    Returns
+    -------
+    weights: array
+        Array containing the edge weights
     """
 
     X, Y = np.meshgrid(lon, lat)
@@ -148,7 +163,7 @@ def add_weights(G, lon, lat, U, V, boat_avg_speed):
         v = helper.get_coord(ind_2, len(lat))
         weights.append(helper.calculate_cost(X, Y, U, V, (u[1], u[0]), (v[1], v[0]), boat_avg_speed))
     
-    G.es["weight"] = weights    
+    return weights    
 
 def get_optimal_routes(graph_object, start_coord, end_coord, lon, lat):
     """
