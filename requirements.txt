@@ -3,6 +3,7 @@ global_land_mask
 folium
 igraph
 matplotlib
+netCDF4
 numpy
 pandas
 scipy

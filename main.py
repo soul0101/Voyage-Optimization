@@ -23,7 +23,7 @@ def get_ocean_current_dataset():
 
     """
     url = 'https://podaac-opendap.jpl.nasa.gov/opendap/allData/oscar/L4/oscar_1_deg/world_oscar_vel_5d2022.nc.gz'
-    ds = xr.open_dataset(url, decode_times=False)
+    ds = xr.open_dataset(url, decode_times=False, cache=True)
     return ds
 
 def process_ds(ds):
@@ -329,7 +329,7 @@ def st_ui():
     )
 
     start_coord, end_coord, boat_avg_speed = st_sidebar()
-    placeholder = st.sidebar.empty()
+    placeholder = st.empty()
 
     if (not globe.is_land(start_coord[0], start_coord[1])) and (not globe.is_land(end_coord[0], end_coord[1])):
         generate_btn = placeholder.button("Generate Best Path", disabled=False)
