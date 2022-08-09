@@ -5,7 +5,7 @@ For ships the ocean currents are an important factor.<br>
 
 ## How does this work?
 - The daisi generates a __Graph__ with the (latitude, longitude) grid of ocean points around the globe as vertices.
-- Edges are the 8-point ocean neighbours with weights being the time taken by the ship to travel the length of the edge considering the __Ocean Currents__. 
+- Edges are the __8-point__ ocean neighbours with weights being the time taken by the ship to travel the length of the edge considering the __Ocean Currents__. 
 - This daisi generates an optimal route for a ship by running __Dijkstra's Shortest Path Algorithm__ on this graph with the __Start__ and __End__ points taken as inputs.
 ## TEST API
 ``` python
