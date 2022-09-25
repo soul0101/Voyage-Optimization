@@ -1,4 +1,8 @@
 # Voyage-Optimization
+<p align="center">
+    <img src="https://user-images.githubusercontent.com/53980340/192162286-6806f674-22be-4d96-bb61-4ababaa5b875.png" alt="Logo" width="700">        
+</p>
+
 When traveling on the surface of the Earth one cannot take a constant heading (an angle with respect to North) to travel the shortest route from point __A__ to __B__. <br>
 Instead, the heading must be constantly readjusted so that the arc of the trajectory corresponds to the intersection between the globe and a plane that passes through the center of the Earth. <br>
 For ships the ocean currents are an important factor.<br>
